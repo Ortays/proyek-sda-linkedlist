@@ -346,5 +346,13 @@ def reset_draft():
     draft_list.clear()
     return {"success": True, "message": "Draft selection reset"}
 
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+# Serve folder img/ sebagai static files
+img_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "img")
+if os.path.exists(img_dir):
+    app.mount("/img", StaticFiles(directory=img_dir), name="img")
+
 # Vercel handler
 handler = Mangum(app)

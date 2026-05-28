@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLBB Draft Pick Analyzer</title>
+    <!-- Google Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Space+Grotesk:wght@400;700&display=swap"
+        rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['Space Grotesk', 'monospace'],
+                    },
+                    colors: {
+                        cyber: {
+                            bg: '#060a13',
+                            panel: 'rgba(15, 23, 42, 0.65)',
+                            border: 'rgba(255, 255, 255, 0.08)',
+                            cyan: '#06b6d4',
+                            cyanGlow: 'rgba(6, 182, 212, 0.4)',
+                            gold: '#f59e0b',
+                            goldGlow: 'rgba(245, 158, 11, 0.4)',
+                            red: '#ef4444',
+                            redGlow: 'rgba(239, 68, 68, 0.4)',
+                            green: '#10b981',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #060a13;
+            background-image: linear-gradient(rgba(6, 10, 19, 0.88), rgba(6, 10, 19, 0.95)), url('gaming_bg.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #06b6d4;
+        }
+
+        /* Neon Glow Utilities */
+        .neon-box-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        .neon-box-cyan:hover:not(.disabled) {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.35);
+            border: 1px solid rgba(6, 182, 212, 0.7);
+        }
+
+        .neon-box-gold {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .neon-box-gold-active {
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);
+            border: 1px solid rgba(245, 158, 11, 0.8);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(15, 23, 42, 0.8) 100%);
+        }
+
+        .neon-box-red {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .neon-box-red:hover {
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
+            border: 1px solid rgba(239, 68, 68, 0.8);
+        }
+
+        /* Grid lines background decoration */
+        .grid-bg {
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        }
+
+        /* Micro animations */
+        @keyframes flow {
+            0% {
+                stroke-dashoffset: 24;
+            }
+
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .flow-line {
+            stroke-dasharray: 8, 4;
+            animation: flow 1.5s linear infinite;
+        }
+
+        @keyframes pulse-gold {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(0.98);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.02);
+            }
+        }
+
+        .pulse-gold-neon {
+            animation: pulse-gold 2s infinite ease-in-out;
+        }
+
+        /* Glass Panel */
+        .glass-panel {
+            background: rgba(10, 17, 32, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+    </style>
+</head>
+
+<body class="grid-bg min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-900">
+
+    <!-- Header Section -->
+    <header class="w-full border-b border-slate-800/80 glass-panel py-4 px-6 md:px-12 sticky top-0 z-50 shadow-2xl">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <!-- Esports logo token -->
+                <div
+                    class="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-amber-500 p-0.5 shadow-lg shadow-cyan-500/20">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                        <span
+                            class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-400">Ω</span>
+                    </div>
+                </div>
+                <div>
+                    <h1
+                        class="text-2xl md:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 font-mono italic">
+                        MLBB DRAFT PICK ANALYZER
+                    </h1>
+                    <p class="text-xs text-slate-400 font-sans tracking-wide">
+                        Real-Time Counter Synergy Optimization Panel | Python Linked List Backend
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span id="backend-status"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-semibold bg-slate-900 border border-slate-800 text-slate-400">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b] animate-pulse"></span>
+                    ENGINE: CONNECTING TO PYTHON...
+                </span>
+                <span class="text-xs font-mono text-slate-500">v1.0.4</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main
+        class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch">
+
+        <!-- Left Column: Counter Recommendations (3 cols) -->
+        <section
+            class="xl:col-span-3 flex flex-col glass-panel rounded-2xl p-5 shadow-2xl relative overflow-hidden transition-all duration-300">
+            <!-- Glowing accent gradient -->
+            <div class="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none">
+            </div>
+
+            <div class="flex items-center gap-2 mb-5 border-b border-slate-800 pb-3">
+                <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1">
+                    </path>
+                </svg>
+                <h2 class="text-base font-bold text-slate-300 tracking-wider uppercase font-mono">
+                    Counter recommendations
+                </h2>
+            </div>
+
+            <!-- List container of counter heroes -->
+            <div id="counter-list" class="flex-grow space-y-4">
+                <!-- Initial Empty State -->
+                <div
+                    class="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-800 rounded-xl bg-slate-950/20">
+                    <div
+                        class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-slate-600 mb-3 border border-slate-800">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-400">No Draft Selections</p>
+                    <p class="text-xs text-slate-500 mt-1 max-w-[200px] mx-auto">Click a hero card in the Hero Pool to
+                        generate dynamic counters.</p>
+                </div>
+            </div>
+
+            <!-- Indicator section explaining backend constraints -->
+            <div class="mt-6 pt-4 border-t border-slate-800 text-[10px] text-slate-500 font-mono space-y-1">
+                <div class="flex justify-between">
+                    <span>IO FORMAT:</span>
+                    <span class="text-amber-500">FLAT INT ARRAYS</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>COMPUTE LAYER:</span>
+                    <span class="text-cyan-400">C++ ENGINE (STD::ARRAY)</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Center Column: Hero Pool Selector (6 cols) -->
+        <section
+            class="xl:col-span-6 flex flex-col glass-panel rounded-2xl p-5 shadow-2xl relative overflow-hidden transition-all duration-300">
+            <!-- Glowing accent gradient -->
+            <div
+                class="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none">
+            </div>
+
+            <div
+                class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-slate-800 pb-4">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                        </path>
+                    </svg>
+                    <h2 class="text-base font-bold text-slate-300 tracking-wider uppercase font-mono">
+                        Hero pool selector
+                    </h2>
+                </div>
+
+                <!-- Live count indicator -->
+                <div class="text-xs font-mono text-slate-400" id="draft-counter-badge">
+                    SELECTION DRAFT: <span class="text-cyan-400 font-bold" id="selected-count">0</span> / 5
+                </div>
+            </div>
+
+            <!-- Filters & Search Toolbar -->
+            <div class="flex flex-col gap-3 mb-5">
+                <div class="flex flex-wrap gap-2" id="role-filters">
+                    <!-- Dynamic filters injected here -->
+                </div>
+
+                <!-- Search Input -->
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </span>
+                    <input type="text" id="search-hero" placeholder="Cari hero berdasarkan nama..."
+                        class="w-full bg-slate-900/80 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all shadow-inner" />
+                </div>
+            </div>
+
+            <!-- Hero Cards Grid -->
+            <div class="flex-grow overflow-y-auto max-h-[500px] pr-2" id="hero-grid-container">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3" id="hero-pool-grid">
+                    <!-- Dynamic Hero Cards Injected Here -->
+                </div>
+            </div>
+
+            <div class="mt-4 text-center text-xs text-slate-500 italic">
+                Pilih hingga maksimal 5 hero untuk dianalisis counter-nya.
+            </div>
+        </section>
+
+        <!-- Right Column: Draft Pick - Linked List (3 cols) -->
+        <section
+            class="xl:col-span-3 flex flex-col glass-panel rounded-2xl p-5 shadow-2xl relative overflow-hidden transition-all duration-300">
+            <!-- Glowing accent gradient -->
+            <div class="absolute bottom-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none">
+            </div>
+
+            <div class="flex items-center gap-2 mb-6 border-b border-slate-800 pb-3">
+                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                    </path>
+                </svg>
+                <h2 class="text-base font-bold text-slate-300 tracking-wider uppercase font-mono">
+                    Draft selection
+                </h2>
+            </div>
+
+            <!-- Linked List Nodes Stack -->
+            <div id="draft-list-container" class="flex-grow flex flex-col justify-between py-2 space-y-2">
+                <!-- 5 slots will be dynamically generated by JS -->
+            </div>
+
+            <!-- Linked List Pointer Visualizer Debugger -->
+            <div class="mt-5 bg-slate-950/80 border border-slate-800 rounded-xl p-3 shadow-inner">
+                <p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1.5">Linked List State Trace
+                </p>
+                <div class="overflow-x-auto whitespace-nowrap scrollbar-none text-xs font-mono py-1"
+                    id="linked-list-debugger">
+                    <!-- Dynamic state rendering like: HEAD -> [Tigreal] -> [Ling] -> NULL -->
+                </div>
+            </div>
+
+            <!-- Restart Button -->
+            <div class="mt-4">
+                <button id="btn-reset" disabled
+                    class="w-full py-3 px-4 rounded-xl text-sm font-bold uppercase tracking-wider text-white bg-gradient-to-r from-red-600 via-rose-600 to-red-700 transition-all duration-300 transform active:scale-95 flex items-center justify-center gap-2 shadow-lg opacity-40 cursor-not-allowed pointer-events-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5"></path>
+                    </svg>
+                    Mulai Ulang
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Section -->
+    <footer
+        class="w-full border-t border-slate-800/80 glass-panel py-4 px-6 text-center text-xs text-slate-500 font-mono">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div>
+                &copy; 2026 Mobile Legends Draft Pick Counter Optimization Panel.
+            </div>
+            <div class="flex items-center gap-3">
+                <span>Memory Allocation: Stack/Heap</span>
+                <span class="w-1 h-1 bg-slate-600 rounded-full"></span>
+                <span>Payload: raw-json-flat</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Core App Logic & State Script -->
+    <script>
+        let heroesDataset = []; // Fetched from backend /api/heroes
+        let activeRoleFilter = "All";
+        let searchQuery = "";
+        let currentDraftIds = []; // Track IDs in current draft locally to check selection state quickly
+
+        // Determine backend URL. If running index.html from main.py, origin is already the backend.
+        // Otherwise (e.g. file:// or another dev server), point to http://localhost:8000.
+        const BACKEND_URL = window.location.origin.includes(":8000") ? "" : "http://localhost:8000";
+
+        // Helper to grab full hero data by ID from local dataset
+        function getHeroById(id) {
+            return heroesDataset.find(h => h.id === id);
+        }
+
+        // ==========================================
+        // UI RENDER ENGINE (DOM MANIPULATION)
+        // ==========================================
+
+        // Define color accents for roles
+        const ROLE_COLORS = {
+            "Tank": { bg: "bg-blue-950/60", text: "text-blue-400", border: "border-blue-800" },
+            "Fighter": { bg: "bg-orange-950/60", text: "text-orange-400", border: "border-orange-800" },
+            "Assassin": { bg: "bg-purple-950/60", text: "text-purple-400", border: "border-purple-800" },
+            "Mage": { bg: "bg-fuchsia-950/60", text: "text-fuchsia-400", border: "border-fuchsia-800" },
+            "Marksman": { bg: "bg-amber-950/60", text: "text-amber-400", border: "border-amber-800" },
+            "Support": { bg: "bg-emerald-950/60", text: "text-emerald-400", border: "border-emerald-800" }
+        };
+
+        // Render Hero Filters (Category list)
+        function initFilters() {
+            const categories = ["All", "Tank", "Fighter", "Assassin", "Mage", "Marksman", "Support"];
+            const filterContainer = document.getElementById("role-filters");
+            filterContainer.innerHTML = "";
+
+            categories.forEach(cat => {
+                const btn = document.createElement("button");
+                btn.className = `px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wider uppercase transition-all duration-200 border ${activeRoleFilter === cat
+                    ? "bg-cyan-500 border-cyan-400 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+                    : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"
+                    }`;
+                btn.textContent = cat;
+                btn.addEventListener("click", () => {
+                    activeRoleFilter = cat;
+                    initFilters();
+                    renderHeroPool();
+                });
+                filterContainer.appendChild(btn);
+            });
+        }
+
+        // Render Center Hero Pool Selector
+        function renderHeroPool() {
+            const grid = document.getElementById("hero-pool-grid");
+            grid.innerHTML = "";
+
+            const draftSize = currentDraftIds.length;
+            const isDraftFull = draftSize >= 5;
+            document.getElementById("selected-count").textContent = draftSize;
+
+            // Filter heroes list based on category & search input
+            const filteredHeroes = heroesDataset.filter(hero => {
+                const matchesRole = activeRoleFilter === "All" || hero.role === activeRoleFilter;
+                const matchesSearch = hero.nama.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesRole && matchesSearch;
+            });
+
+            if (filteredHeroes.length === 0) {
+                grid.className = "flex items-center justify-center py-10 w-full col-span-full";
+                grid.innerHTML = `<div class="text-slate-500 font-mono text-sm text-center">Hero tidak ditemukan.</div>`;
+                return;
+            } else {
+                grid.className = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3";
+            }
+
+            filteredHeroes.forEach(hero => {
+                const isSelected = currentDraftIds.includes(hero.id);
+                const roleStyle = ROLE_COLORS[hero.role] || { bg: "bg-slate-900", text: "text-slate-300", border: "border-slate-800" };
+
+                const card = document.createElement("button");
+                // Base styling classes
+                let cardClasses = `group relative overflow-hidden bg-slate-900 border-2 rounded-xl p-2 transition-all duration-300 flex flex-col items-center justify-center text-center `;
+
+                if (isSelected) {
+                    // Selected state
+                    cardClasses += `border-cyan-500 opacity-40 cursor-not-allowed scale-95 shadow-[0_0_15px_rgba(6,182,212,0.1)]`;
+                } else if (isDraftFull) {
+                    // Selection locked state
+                    cardClasses += `border-slate-800/60 opacity-20 cursor-not-allowed disabled`;
+                } else {
+                    // Available state
+                    cardClasses += `border-slate-800 hover:border-cyan-500 hover:scale-105 shadow-md hover:shadow-[0_0_15px_rgba(6,182,212,0.15)]`;
+                }
+
+                card.className = cardClasses;
+                card.disabled = isSelected || isDraftFull;
+
+                card.innerHTML = `
+                    <div class="relative w-12 h-12 mb-2 rounded-lg overflow-hidden bg-slate-950 border border-slate-800 group-hover:border-cyan-500 transition-colors">
+                        <img src="${hero.img}" alt="${hero.nama}" class="w-full h-full object-cover">
+                        ${isSelected ? `
+                            <div class="absolute inset-0 bg-cyan-950/70 flex items-center justify-center">
+                                <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <p class="text-xs font-bold text-slate-200 truncate w-full group-hover:text-cyan-400 transition-colors uppercase font-mono">${hero.nama}</p>
+                    <span class="text-[9px] font-semibold mt-1 px-1.5 py-0.5 rounded-md border ${roleStyle.bg} ${roleStyle.text} ${roleStyle.border} uppercase font-mono">
+                        ${hero.role}
+                    </span>
+                `;
+
+                card.addEventListener("click", () => handleHeroSelect(hero));
+                grid.appendChild(card);
+            });
+        }
+
+        // Render Right Column: Draft Pick
+        function renderDraftPicks(draftArray) {
+            const container = document.getElementById("draft-list-container");
+            container.innerHTML = "";
+
+            const draftSize = draftArray.length;
+            currentDraftIds = draftArray.map(h => h.id);
+
+            for (let i = 0; i < 5; i++) {
+                const nodeData = draftArray[i];
+                const slotDiv = document.createElement("div");
+                slotDiv.className = "w-full";
+
+                if (nodeData) {
+                    // Filled Pick Node
+                    const roleStyle = ROLE_COLORS[nodeData.role] || { bg: "bg-slate-900", text: "text-slate-300", border: "border-slate-800" };
+                    slotDiv.innerHTML = `
+                        <div class="flex items-center gap-3 p-3 rounded-xl border neon-box-gold-active animate-scale-up relative">
+                            <div class="w-10 h-10 rounded-lg overflow-hidden border border-amber-500/50 bg-slate-950 flex-shrink-0">
+                                <img src="${nodeData.img}" class="w-full h-full object-cover">
+                            </div>
+                            <div class="flex-grow min-w-0">
+                                <div class="flex justify-between items-start">
+                                    <h4 class="text-xs font-mono font-bold tracking-widest text-amber-500 uppercase">PICK #${i + 1}</h4>
+                                    <span class="text-[9px] font-mono font-semibold px-1.5 rounded border ${roleStyle.bg} ${roleStyle.text} ${roleStyle.border} uppercase">
+                                        ${nodeData.role}
+                                    </span>
+                                </div>
+                                <h3 class="text-sm font-black text-slate-100 uppercase tracking-wide truncate mt-0.5">${nodeData.nama}</h3>
+                            </div>
+                            <div class="text-[10px] font-mono text-slate-500 pr-1 select-none">
+                                ID: ${nodeData.id}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Empty "Pending" Node Slot
+                    const isNextSlot = i === draftArray.length;
+                    slotDiv.innerHTML = `
+                        <div class="flex items-center gap-3 p-3 rounded-xl border-2 border-dashed ${isNextSlot
+                            ? "border-cyan-500/40 bg-slate-950/20 shadow-[0_0_10px_rgba(6,182,212,0.02)]"
+                            : "border-slate-800 bg-slate-950/5 opacity-55"
+                        } transition-colors min-h-[58px]">
+                            <div class="w-10 h-10 rounded-lg border border-dashed border-slate-700 bg-slate-900/50 flex items-center justify-center flex-shrink-0">
+                                ${isNextSlot ? `
+                                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#06b6d4] animate-ping"></span>
+                                ` : `
+                                    <span class="w-2 h-2 rounded-full bg-slate-800"></span>
+                                `}
+                            </div>
+                            <div class="flex-grow">
+                                <div class="flex justify-between">
+                                    <h4 class="text-xs font-mono text-slate-500 uppercase tracking-widest">SLOT #${i + 1}</h4>
+                                    <span class="text-[8px] font-mono text-slate-600 uppercase">EMPTY</span>
+                                </div>
+                                <p class="text-xs font-bold text-slate-500 italic mt-0.5">${isNextSlot ? "Awaiting Draft Pick..." : "Pending Sequence"}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.appendChild(slotDiv);
+
+                // Add arrow SVG connector between items (except after the last one)
+                if (i < 4) {
+                    const isActiveConnection = nodeData && draftArray[i + 1];
+                    const connectorDiv = document.createElement("div");
+                    connectorDiv.className = "flex justify-center -my-1 py-0.5 select-none";
+                    connectorDiv.innerHTML = `
+                        <svg class="w-5 h-5 ${isActiveConnection ? 'text-amber-500' : 'text-slate-800'}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path class="${isActiveConnection ? 'flow-line' : ''}" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 13l-7 7-7-7m14-6l-7 7-7-7" />
+                        </svg>
+                    `;
+                    container.appendChild(connectorDiv);
+                }
+            }
+
+            // Update Reset Button State based on selection count
+            const btnReset = document.getElementById("btn-reset");
+            if (draftSize === 5) {
+                btnReset.disabled = false;
+                btnReset.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+                btnReset.classList.add('neon-box-red', 'hover:from-red-500', 'hover:to-rose-600');
+            } else {
+                btnReset.disabled = true;
+                btnReset.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+                btnReset.classList.remove('neon-box-red', 'hover:from-red-500', 'hover:to-rose-600');
+            }
+        }
+
+        // Render Memory State Debugger Trace (Visual pointer flow)
+        function renderStateDebugger(traceString) {
+            const debugContainer = document.getElementById("linked-list-debugger");
+            debugContainer.innerHTML = traceString || `<span class="text-slate-600">HEAD ➔ NULL</span>`;
+        }
+
+        // Render Left Column: Counter Recommendations based on selected heroes
+        function renderCounterRecommendations(countersData = []) {
+            const list = document.getElementById("counter-list");
+            list.innerHTML = "";
+
+            if (countersData.length === 0 || currentDraftIds.length === 0) {
+                list.innerHTML = `
+                    <div class="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-800 rounded-xl bg-slate-950/20">
+                        <div class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-slate-600 mb-3 border border-slate-800">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-400">No Draft Selections</p>
+                        <p class="text-xs text-slate-500 mt-1 max-w-[200px] mx-auto">Click a hero card in the Hero Pool to generate dynamic counters.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const lastPickedHero = getHeroById(currentDraftIds[currentDraftIds.length - 1]);
+
+            // Header stating who we are countering
+            const targetedHeader = document.createElement("div");
+            targetedHeader.className = "mb-4 p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-center animate-fade-in";
+            targetedHeader.innerHTML = `
+                <p class="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Target Countering Pick</p>
+                <h3 class="text-sm font-bold text-amber-500 uppercase mt-0.5 font-mono">${lastPickedHero ? lastPickedHero.nama : "Unknown"}</h3>
+            `;
+            list.appendChild(targetedHeader);
+
+            // Render counter cards
+            countersData.forEach((counterItem, idx) => {
+                const hero = counterItem.hero;
+                if (!hero) return;
+
+                const imgUrl = `img/${hero.nama.replace(/\s+/g, '_')}.png`;
+                const roleStyle = ROLE_COLORS[hero.role] || { bg: "bg-slate-900", text: "text-slate-300", border: "border-slate-800" };
+                const rate = counterItem.rate;
+                const reason = counterItem.reason;
+
+                const card = document.createElement("div");
+                card.className = "p-3 bg-slate-900/50 border border-slate-800/80 rounded-xl flex gap-3 hover:border-cyan-500/40 hover:bg-slate-900 transition-all duration-300 shadow-lg";
+                card.innerHTML = `
+                    <div class="w-12 h-12 rounded-lg bg-slate-950 overflow-hidden border border-slate-800 flex-shrink-0">
+                        <img src="${imgUrl}" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-grow min-w-0">
+                        <div class="flex justify-between items-center">
+                            <h4 class="text-xs font-black text-slate-100 uppercase tracking-wide truncate font-mono">${hero.nama}</h4>
+                            <span class="text-[8px] font-mono px-1 rounded bg-red-950 border border-red-800 text-red-400">#${idx + 1} COUNTER</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 truncate mt-0.5">${reason}</p>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // SELECTION & RESTART CONTROLLER
+        // ==========================================
+
+        // Refresh draft list and recommendations from Python backend
+        async function refreshUI() {
+            try {
+                // 1. Fetch current draft from API
+                const draftResponse = await fetch(`${BACKEND_URL}/api/draft`);
+                if (!draftResponse.ok) throw new Error("Failed to fetch draft");
+                const draftData = await draftResponse.json();
+
+                // Update local draft array and render it
+                currentDraftIds = draftData.draft.map(h => h.id);
+                renderDraftPicks(draftData.draft);
+                renderStateDebugger(draftData.trace);
+
+                // 2. Fetch counter recommendations from API
+                const recommendationsResponse = await fetch(`${BACKEND_URL}/api/recommendations`);
+                if (!recommendationsResponse.ok) throw new Error("Failed to fetch recommendations");
+                const recommendationsData = await recommendationsResponse.json();
+                renderCounterRecommendations(recommendationsData);
+
+                // 3. Render hero pool (to lock/unlock cards based on updated draft state)
+                renderHeroPool();
+
+            } catch (err) {
+                console.error("Error updating UI from backend:", err);
+            }
+        }
+
+        // Handle selecting a hero from the pool
+        async function handleHeroSelect(hero) {
+            try {
+                // Set loading state on the Left counter panel while waiting for API
+                const list = document.getElementById("counter-list");
+                list.innerHTML = `
+                    <div class="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-6">
+                        <svg class="animate-spin h-8 w-8 text-cyan-400 mb-3" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="text-xs font-mono text-cyan-400 animate-pulse">Running Python Solvers...</p>
+                    </div>
+                `;
+
+                const response = await fetch(`${BACKEND_URL}/api/draft/add`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ hero_id: hero.id })
+                });
+
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    alert(result.message || "Gagal memilih hero");
+                }
+
+                // Trigger updates to selections immediately by pulling fresh state
+                await refreshUI();
+
+            } catch (err) {
+                console.error("Error selecting hero:", err);
+            }
+        }
+
+        // Setup Event Listeners & Initial Rendering
+        document.addEventListener("DOMContentLoaded", async () => {
+            // 1. Fetch initial HERO_POOL from backend
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/heroes`);
+                if (!response.ok) throw new Error("Failed to fetch heroes");
+                heroesDataset = await response.json();
+
+                // Update connection badge to active
+                const statusSpan = document.getElementById("backend-status");
+                if (statusSpan) {
+                    statusSpan.innerHTML = `
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse"></span>
+                        ENGINE: PYTHON CONNECTED
+                    `;
+                }
+            } catch (err) {
+                console.error("Failed to load initial dataset from server:", err);
+                const statusSpan = document.getElementById("backend-status");
+                if (statusSpan) {
+                    statusSpan.innerHTML = `
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse"></span>
+                        ENGINE: ERROR
+                    `;
+                    statusSpan.classList.add("text-red-400", "border-red-900");
+                }
+                alert("Gagal memuat dataset hero dari backend server.");
+                return;
+            }
+
+            // Setup Search filter
+            const searchInput = document.getElementById("search-hero");
+            searchInput.addEventListener("input", (e) => {
+                searchQuery = e.target.value;
+                renderHeroPool();
+            });
+
+            // Setup Restart button
+            const btnReset = document.getElementById("btn-reset");
+            btnReset.addEventListener("click", async () => {
+                try {
+                    await fetch(`${BACKEND_URL}/api/draft/reset`, { method: "POST" });
+
+                    // Reset search query
+                    searchQuery = "";
+                    searchInput.value = "";
+                    activeRoleFilter = "All";
+
+                    // Redraw all UI elements
+                    initFilters();
+                    await refreshUI();
+                } catch (err) {
+                    console.error("Error resetting draft:", err);
+                }
+            });
+
+            // Run initial setup
+            initFilters();
+            await refreshUI();
+        });
+    </script>
+</body>
+
+</html>

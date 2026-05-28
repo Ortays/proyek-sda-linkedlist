@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MLBB Draft Pick Analyzer</title>
-    <link rel="icon" href="/img/libra.png">
+    <link rel="icon" href="<link rel=" icon" href="https://proyek-sda-linkedlist-8qg1.vercel.app/img/libra.ico">
     <!-- Google Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Space+Grotesk:wght@400;700&display=swap"
@@ -504,7 +504,7 @@
                     slotDiv.innerHTML = `
                         <div class="flex items-center gap-3 p-3 rounded-xl border neon-box-gold-active animate-scale-up relative">
                             <div class="w-10 h-10 rounded-lg overflow-hidden border border-amber-500/50 bg-slate-950 flex-shrink-0">
-                                <img src="${nodeData.img}" class="w-full h-full object-cover">
+                                <img src="${nodeData.img.startsWith('http') ? nodeData.img : BACKEND_URL + nodeData.img}" class="w-full h-full object-cover">
                             </div>
                             <div class="flex-grow min-w-0">
                                 <div class="flex justify-between items-start">

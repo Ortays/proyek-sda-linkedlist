@@ -2,10 +2,12 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
+from upstash_redis import Redis
 
 # ==========================================
-# 1. HERO POOL DATASET & DATABASE
+# 1. HERO POOL DATASET
 # ==========================================
 HERO_POOL = [
     {"id": 1, "nama": "Edith", "role": "Tank"},
@@ -204,64 +206,51 @@ def get_hero_img_url(hero_name: str) -> str:
         .replace(".", "")
         .replace("'", "")
         .replace("&", "&"))
-    return f"/img/{safe_name}.png"
+    return f"https://proyek-sda-linkedlist-8qg1.vercel.app/img/{safe_name}.png"
 
 # ==========================================
-# 3. LINKED LIST STATE
+# 3. REDIS LINKED LIST
 # ==========================================
-class PickNode:
-    def __init__(self, hero):
-        self.hero = hero
-        self.next = None
+DRAFT_KEY = "draft_list"
 
-class DraftLinkedList:
-    def __init__(self):
-        self.head = None
-        self.size = 0
+def get_redis():
+    return Redis(
+        url=os.environ["UPSTASH_REDIS_REST_URL"],
+        token=os.environ["UPSTASH_REDIS_REST_TOKEN"]
+    )
 
-    def append(self, hero):
-        if self.size >= 5:
-            return False
-        new_node = PickNode(hero)
-        if not self.head:
-            self.head = new_node
-        else:
-            current = self.head
-            while current.next:
-                current = current.next
-            current.next = new_node
-        self.size += 1
-        return True
+def get_draft_ids() -> list:
+    redis = get_redis()
+    data = redis.get(DRAFT_KEY)
+    if not data:
+        return []
+    import json
+    return json.loads(data)
 
-    def clear(self):
-        self.head = None
-        self.size = 0
+def save_draft_ids(ids: list):
+    import json
+    redis = get_redis()
+    redis.set(DRAFT_KEY, json.dumps(ids))
 
-    def to_list(self):
-        arr = []
-        current = self.head
-        while current:
-            arr.append(current.hero.copy())
-            current = current.next
-        return arr
+def get_draft_heroes() -> list:
+    ids = get_draft_ids()
+    result = []
+    for hero_id in ids:
+        hero = get_hero_by_id(hero_id)
+        if hero:
+            h = hero.copy()
+            h["img"] = get_hero_img_url(h["nama"])
+            result.append(h)
+    return result
 
-    def get_last_node(self):
-        if not self.head:
-            return None
-        current = self.head
-        while current.next:
-            current = current.next
-        return current
-
-    def contains(self, hero_id):
-        current = self.head
-        while current:
-            if current.hero["id"] == hero_id:
-                return True
-            current = current.next
-        return False
-
-draft_list = DraftLinkedList()
+def build_trace(heroes: list) -> str:
+    if not heroes:
+        return '<span class="text-slate-600">HEAD ➔ NULL</span>'
+    trace = '<span class="text-cyan-400 font-bold">HEAD</span>'
+    for h in heroes:
+        trace += f' <span class="text-slate-500">➔</span> <span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-400 font-bold">{h["nama"]}</span>'
+    trace += ' <span class="text-slate-500">➔</span> <span class="text-slate-600 font-bold">NULL</span>'
+    return trace
 
 # ==========================================
 # 4. FASTAPI APP
@@ -275,55 +264,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve img/ as static files
+img_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "img")
+if os.path.exists(img_dir):
+    app.mount("/img", StaticFiles(directory=img_dir), name="img")
+
 @app.get("/api/heroes")
 def get_heroes():
-    heroes_with_images = []
-    for hero in HERO_POOL:
-        hero_copy = hero.copy()
-        hero_copy["img"] = get_hero_img_url(hero["nama"])
-        heroes_with_images.append(hero_copy)
-    return heroes_with_images
+    return [dict(**h, img=get_hero_img_url(h["nama"])) for h in HERO_POOL]
 
 @app.get("/api/draft")
 def get_draft():
-    current = draft_list.head
-    trace_list = []
-    while current:
-        trace_list.append(current.hero["nama"])
-        current = current.next
-
-    if trace_list:
-        trace_str = '<span class="text-cyan-400 font-bold">HEAD</span>'
-        for name in trace_list:
-            trace_str += f' <span class="text-slate-500">➔</span> <span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-400 font-bold">{name}</span>'
-        trace_str += ' <span class="text-slate-500">➔</span> <span class="text-slate-600 font-bold">NULL</span>'
-    else:
-        trace_str = '<span class="text-slate-600">HEAD ➔ NULL</span>'
-
-    draft_array = draft_list.to_list()
-    for item in draft_array:
-        item["img"] = get_hero_img_url(item["nama"])
-
-    return {"size": draft_list.size, "draft": draft_array, "trace": trace_str}
+    heroes = get_draft_heroes()
+    return {
+        "size": len(heroes),
+        "draft": heroes,
+        "trace": build_trace(heroes)
+    }
 
 @app.get("/api/recommendations")
 def get_recommendations():
-    last_node = draft_list.get_last_node()
-    counters_data = []
-    if last_node:
-        last_hero = last_node.hero
-        counters = COUNTER_MAP.get(last_hero["id"], [])
-        for idx, c_id in enumerate(counters):
-            c_hero = get_hero_by_id(c_id)
-            if c_hero:
-                c_hero_copy = c_hero.copy()
-                c_hero_copy["img"] = get_hero_img_url(c_hero["nama"])
-                counters_data.append({
-                    "hero": c_hero_copy,
-                    "reason": "Counter optimal untuk laning dan teamfight.",
-                    "rate": 85 - (idx * 5)
-                })
-    return counters_data
+    ids = get_draft_ids()
+    if not ids:
+        return []
+    last_id = ids[-1]
+    counters = COUNTER_MAP.get(last_id, [])
+    result = []
+    for idx, c_id in enumerate(counters):
+        hero = get_hero_by_id(c_id)
+        if hero:
+            h = hero.copy()
+            h["img"] = get_hero_img_url(h["nama"])
+            result.append({
+                "hero": h,
+                "reason": "Counter optimal untuk laning dan teamfight.",
+                "rate": 85 - (idx * 5)
+            })
+    return result
 
 @app.post("/api/draft/add")
 async def add_to_draft(request: Request):
@@ -334,25 +311,19 @@ async def add_to_draft(request: Request):
     hero = get_hero_by_id(hero_id)
     if not hero:
         return JSONResponse(status_code=404, content={"success": False, "message": "Hero not found"})
-    if draft_list.contains(hero_id):
+    ids = get_draft_ids()
+    if hero_id in ids:
         return JSONResponse(status_code=400, content={"success": False, "message": f"Hero {hero['nama']} already selected"})
-    if draft_list.size >= 5:
+    if len(ids) >= 5:
         return JSONResponse(status_code=400, content={"success": False, "message": "Draft is full (maximum 5 heroes)"})
-    draft_list.append(hero)
+    ids.append(hero_id)
+    save_draft_ids(ids)
     return {"success": True, "message": f"Added {hero['nama']} to draft"}
 
 @app.post("/api/draft/reset")
 def reset_draft():
-    draft_list.clear()
+    save_draft_ids([])
     return {"success": True, "message": "Draft selection reset"}
-
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-
-# Serve folder img/ sebagai static files
-img_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "img")
-if os.path.exists(img_dir):
-    app.mount("/img", StaticFiles(directory=img_dir), name="img")
 
 # Vercel handler
 handler = Mangum(app)

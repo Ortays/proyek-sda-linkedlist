@@ -465,7 +465,7 @@
 
                 card.innerHTML = `
                     <div class="relative w-12 h-12 mb-2 rounded-lg overflow-hidden bg-slate-950 border border-slate-800 group-hover:border-cyan-500 transition-colors">
-                        <img src="${hero.img}" alt="${hero.nama}" class="w-full h-full object-cover">
+                        <img src="${hero.img.startsWith('http') ? hero.img : BACKEND_URL + hero.img}" alt="${hero.nama}" class="w-full h-full object-cover">
                         ${isSelected ? `
                             <div class="absolute inset-0 bg-cyan-950/70 flex items-center justify-center">
                                 <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">

@@ -1,6 +1,3 @@
 fastapi
 uvicorn
-<<<<<<< HEAD
 mangum
-=======
->>>>>>> 3163899a34caa11cab2eda192055511bd072ec5d

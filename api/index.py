@@ -199,12 +199,12 @@ def get_hero_by_id(hero_id):
     return None
 
 def get_hero_img_url(hero_name: str) -> str:
-    img_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "img")
-    safe_name = hero_name.replace(" ", "_").replace(".", "").replace("'", "")
-    for ext in ["png", "jpg", "jpeg", "webp"]:
-        if os.path.exists(os.path.join(img_dir, f"{safe_name}.{ext}")):
-            return f"/img/{safe_name}.{ext}"
-    return f"https://api.dicebear.com/7.x/bottts/svg?seed={hero_name}"
+    safe_name = (hero_name
+        .replace(" ", "_")
+        .replace(".", "")
+        .replace("'", "")
+        .replace("&", "&"))
+    return f"/img/{safe_name}.png"
 
 # ==========================================
 # 3. LINKED LIST STATE

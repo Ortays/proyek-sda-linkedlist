@@ -290,8 +290,10 @@
 
             <!-- Linked List A (Pool) State Trace -->
             <div class="mb-4 bg-slate-950/80 border border-slate-800 rounded-xl p-3 shadow-inner">
-                <p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1.5">Linked List A (Pool Hero Tersedia) State Trace</p>
-                <div class="overflow-x-auto whitespace-nowrap scrollbar-none text-xs font-mono py-1" id="linked-list-pool-debugger">
+                <p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1.5">Linked List A (Pool
+                    Hero Tersedia) State Trace</p>
+                <div class="overflow-x-auto whitespace-nowrap scrollbar-none text-xs font-mono py-1"
+                    id="linked-list-pool-debugger">
                     <!-- Dynamic pool state rendering -->
                 </div>
             </div>
@@ -381,7 +383,7 @@
 
         // Determine backend URL. If running index.html from main.py, origin is already the backend.
         // Otherwise (e.g. file:// or another dev server), point to http://localhost:8000.
-        const BACKEND_URL = window.location.protocol === 'file:' ? "https://proyek-sda-linkedlist-8qg1.vercel.app" : "";
+        const BACKEND_URL = window.location.hostname === 'ortays.github.io' || window.location.protocol === 'file:' ? "https://proyek-sda-linkedlist-8qg1.vercel.app" : "";
 
         // Helper to grab full hero data by ID from local dataset
         function getHeroById(id) {

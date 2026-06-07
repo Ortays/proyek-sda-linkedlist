@@ -381,7 +381,7 @@
 
         // Determine backend URL. If running index.html from main.py, origin is already the backend.
         // Otherwise (e.g. file:// or another dev server), point to http://localhost:8000.
-        const BACKEND_URL = window.location.protocol === 'file:' ? "https://proyek-sda-linkedlist-8qg1.vercel.app" : "";
+        const BACKEND_URL = window.location.hostname === 'ortays.github.io' || window.location.protocol === 'file:' ? "https://proyek-sda-linkedlist-8qg1.vercel.app" : "";
 
         // Helper to grab full hero data by ID from local dataset
         function getHeroById(id) {

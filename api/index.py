@@ -209,51 +209,186 @@ def get_hero_img_url(hero_name: str) -> str:
     return f"https://proyek-sda-linkedlist-8qg1.vercel.app/img/{safe_name}.png"
 
 # ==========================================
-# 3. REDIS LINKED LIST
+# 3. NODE & LINKED LIST STRUCTURES
+# ==========================================
+class HeroNode:
+    def __init__(self, id: int, nama: str, role: str):
+        self.id = id
+        self.nama = nama
+        self.role = role
+        self.next = None
+
+class HeroLinkedList:
+    def __init__(self):
+        self.head = None
+
+    def append(self, node: HeroNode):
+        if not self.head:
+            self.head = node
+            node.next = None
+            return
+        curr = self.head
+        while curr.next:
+            curr = curr.next
+        curr.next = node
+        node.next = None
+
+    def find_and_remove(self, hero_id: int) -> HeroNode:
+        """
+        Mencari node berdasarkan hero_id di dalam list, memutuskan hubungannya
+        dari list (Delete Node), menyambungkan kembali pointer list,
+        lalu mengembalikan node yang dihapus.
+        """
+        if not self.head:
+            return None
+        
+        if self.head.id == hero_id:
+            removed = self.head
+            self.head = self.head.next
+            removed.next = None
+            return removed
+        
+        curr = self.head
+        while curr.next:
+            if curr.next.id == hero_id:
+                removed = curr.next
+                curr.next = curr.next.next
+                removed.next = None
+                return removed
+            curr = curr.next
+        return None
+
+    def to_list(self) -> list:
+        nodes = []
+        curr = self.head
+        while curr:
+            nodes.append(curr)
+            curr = curr.next
+        return nodes
+
+# ==========================================
+# 4. REDIS LINKED LIST PERSISTENCE & HELPERS
 # ==========================================
 DRAFT_KEY = "draft_list"
 
+import json
+
+class FileMockRedis:
+    def __init__(self, filepath="local_redis.json"):
+        # Put local_redis.json inside the workspace directory for clean persistence
+        self.filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", filepath)
+
+    def _load(self):
+        if os.path.exists(self.filepath):
+            try:
+                with open(self.filepath, "r") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    def _save(self, data):
+        try:
+            with open(self.filepath, "w") as f:
+                json.dump(data, f)
+        except Exception:
+            pass
+
+    def get(self, key):
+        data = self._load()
+        return data.get(key, None)
+
+    def set(self, key, value):
+        data = self._load()
+        data[key] = value
+        self._save(data)
+        return True
+
 def get_redis():
-    return Redis(
-        url=os.environ["UPSTASH_REDIS_REST_URL"],
-        token=os.environ["UPSTASH_REDIS_REST_TOKEN"]
-    )
+    url = os.environ.get("UPSTASH_REDIS_REST_URL")
+    token = os.environ.get("UPSTASH_REDIS_REST_TOKEN")
+    if not url or not token:
+        # Fallback ke file JSON lokal jika env vars Redis tidak dikonfigurasi
+        global _mock_redis_instance
+        if '_mock_redis_instance' not in globals():
+            _mock_redis_instance = FileMockRedis()
+        return _mock_redis_instance
+    return Redis(url=url, token=token)
 
 def get_draft_ids() -> list:
     redis = get_redis()
     data = redis.get(DRAFT_KEY)
     if not data:
         return []
-    import json
     return json.loads(data)
 
 def save_draft_ids(ids: list):
-    import json
     redis = get_redis()
     redis.set(DRAFT_KEY, json.dumps(ids))
 
-def get_draft_heroes() -> list:
-    ids = get_draft_ids()
-    result = []
-    for hero_id in ids:
-        hero = get_hero_by_id(hero_id)
-        if hero:
-            h = hero.copy()
-            h["img"] = get_hero_img_url(h["nama"])
-            result.append(h)
-    return result
+def reconstruct_lists():
+    """
+    Kondisi Awal (Inisialisasi):
+    - Linked List A (Pool Hero): berisi 132 hero dari dataset.
+    - Linked List B (Draft): kosong.
+    
+    Kemudian, untuk setiap hero yang terdaftar di database draft, lakukan operasi pemindahan node:
+    - Langkah 1: Delete Node dari Pool A (memutus pointer)
+    - Langkah 2: Insert Node ke Draft B (menyambung pointer)
+    """
+    draft_ids = get_draft_ids()
+    
+    list_A = HeroLinkedList()
+    for hero_data in HERO_POOL:
+        node = HeroNode(id=hero_data["id"], nama=hero_data["nama"], role=hero_data["role"])
+        list_A.append(node)
+        
+    list_B = HeroLinkedList()
+    
+    for d_id in draft_ids:
+        node = list_A.find_and_remove(d_id)
+        if node:
+            list_B.append(node)
+            
+    return list_A, list_B
 
-def build_trace(heroes: list) -> str:
-    if not heroes:
+def build_trace_B(list_B: HeroLinkedList) -> str:
+    nodes = list_B.to_list()
+    if not nodes:
         return '<span class="text-slate-600">HEAD ➔ NULL</span>'
     trace = '<span class="text-cyan-400 font-bold">HEAD</span>'
-    for h in heroes:
-        trace += f' <span class="text-slate-500">➔</span> <span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-400 font-bold">{h["nama"]}</span>'
+    for n in nodes:
+        trace += f' <span class="text-slate-500">➔</span> <span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-amber-400 font-bold">{n.nama}</span>'
     trace += ' <span class="text-slate-500">➔</span> <span class="text-slate-600 font-bold">NULL</span>'
     return trace
 
+def build_trace_A(list_A: HeroLinkedList) -> str:
+    nodes = list_A.to_list()
+    if not nodes:
+        return '<span class="text-slate-600">HEAD ➔ NULL</span>'
+    
+    # Jika <= 5 elemen, tampilkan semua
+    if len(nodes) <= 5:
+        trace_parts = []
+        for n in nodes:
+            trace_parts.append(f'<span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-cyan-400 font-bold">{n.nama}</span>')
+        return '<span class="text-cyan-400 font-bold">HEAD</span> ➔ ' + ' ➔ '.join(trace_parts) + ' ➔ <span class="text-slate-600 font-bold">NULL</span>'
+    
+    # Tampilkan 3 pertama, lalu ..., lalu terakhir
+    first_nodes = nodes[:3]
+    last_node = nodes[-1]
+    
+    trace_parts = []
+    for n in first_nodes:
+        trace_parts.append(f'<span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-cyan-400 font-bold">{n.nama}</span>')
+    
+    trace = '<span class="text-cyan-400 font-bold">HEAD</span> ➔ ' + ' ➔ '.join(trace_parts)
+    trace += ' ➔ <span class="text-slate-500 font-bold">...</span> ➔ '
+    trace += f'<span class="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-cyan-400 font-bold">{last_node.nama}</span> ➔ <span class="text-slate-600 font-bold">NULL</span>'
+    return trace
+
 # ==========================================
-# 4. FASTAPI APP
+# 5. FASTAPI APP
 # ==========================================
 app = FastAPI()
 
@@ -271,15 +406,30 @@ if os.path.exists(img_dir):
 
 @app.get("/api/heroes")
 def get_heroes():
+    # Tetap mengembalikan data mentah pool lengkap agar UI dapat menginisialisasi
     return [dict(**h, img=get_hero_img_url(h["nama"])) for h in HERO_POOL]
 
 @app.get("/api/draft")
 def get_draft():
-    heroes = get_draft_heroes()
+    list_A, list_B = reconstruct_lists()
+    
+    draft_heroes = []
+    curr = list_B.head
+    while curr:
+        hero_dict = {
+            "id": curr.id,
+            "nama": curr.nama,
+            "role": curr.role,
+            "img": get_hero_img_url(curr.nama)
+        }
+        draft_heroes.append(hero_dict)
+        curr = curr.next
+        
     return {
-        "size": len(heroes),
-        "draft": heroes,
-        "trace": build_trace(heroes)
+        "size": len(draft_heroes),
+        "draft": draft_heroes,
+        "trace": build_trace_B(list_B),
+        "pool_trace": build_trace_A(list_A)
     }
 
 @app.get("/api/recommendations")
@@ -308,17 +458,39 @@ async def add_to_draft(request: Request):
     hero_id = body.get("hero_id")
     if hero_id is None:
         return JSONResponse(status_code=400, content={"success": False, "message": "Missing hero_id"})
-    hero = get_hero_by_id(hero_id)
-    if not hero:
-        return JSONResponse(status_code=404, content={"success": False, "message": "Hero not found"})
-    ids = get_draft_ids()
-    if hero_id in ids:
-        return JSONResponse(status_code=400, content={"success": False, "message": f"Hero {hero['nama']} already selected"})
-    if len(ids) >= 5:
+    
+    list_A, list_B = reconstruct_lists()
+    
+    # Cari hero di List A dan cabut (Delete Node)
+    node = list_A.find_and_remove(hero_id)
+    if not node:
+        # Cek apakah hero sudah ada di List B (Draft)
+        curr = list_B.head
+        in_draft = False
+        while curr:
+            if curr.id == hero_id:
+                in_draft = True
+                break
+            curr = curr.next
+        if in_draft:
+            hero = get_hero_by_id(hero_id)
+            return JSONResponse(status_code=400, content={"success": False, "message": f"Hero {hero['nama']} already selected"})
+        else:
+            return JSONResponse(status_code=404, content={"success": False, "message": "Hero not found"})
+            
+    # Cek apakah draft sudah penuh
+    draft_nodes = list_B.to_list()
+    if len(draft_nodes) >= 5:
         return JSONResponse(status_code=400, content={"success": False, "message": "Draft is full (maximum 5 heroes)"})
-    ids.append(hero_id)
-    save_draft_ids(ids)
-    return {"success": True, "message": f"Added {hero['nama']} to draft"}
+        
+    # Sambungkan ke List B (Insert Node)
+    list_B.append(node)
+    
+    # Simpan kembali status draft terupdate ke database
+    new_draft_ids = [n.id for n in list_B.to_list()]
+    save_draft_ids(new_draft_ids)
+    
+    return {"success": True, "message": f"Added {node.nama} to draft"}
 
 @app.post("/api/draft/reset")
 def reset_draft():

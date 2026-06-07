@@ -288,6 +288,14 @@
                 </div>
             </div>
 
+            <!-- Linked List A (Pool) State Trace -->
+            <div class="mb-4 bg-slate-950/80 border border-slate-800 rounded-xl p-3 shadow-inner">
+                <p class="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-1.5">Linked List A (Pool Hero Tersedia) State Trace</p>
+                <div class="overflow-x-auto whitespace-nowrap scrollbar-none text-xs font-mono py-1" id="linked-list-pool-debugger">
+                    <!-- Dynamic pool state rendering -->
+                </div>
+            </div>
+
             <!-- Hero Cards Grid -->
             <div class="flex-grow overflow-y-auto max-h-[500px] pr-2" id="hero-grid-container">
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3" id="hero-pool-grid">
@@ -373,7 +381,7 @@
 
         // Determine backend URL. If running index.html from main.py, origin is already the backend.
         // Otherwise (e.g. file:// or another dev server), point to http://localhost:8000.
-        const BACKEND_URL = "https://proyek-sda-linkedlist-8qg1.vercel.app";
+        const BACKEND_URL = window.location.protocol === 'file:' ? "https://proyek-sda-linkedlist-8qg1.vercel.app" : "";
 
         // Helper to grab full hero data by ID from local dataset
         function getHeroById(id) {
@@ -655,6 +663,12 @@
                 currentDraftIds = draftData.draft.map(h => h.id);
                 renderDraftPicks(draftData.draft);
                 renderStateDebugger(draftData.trace);
+
+                // Update Pool debugger
+                const poolDebugContainer = document.getElementById("linked-list-pool-debugger");
+                if (poolDebugContainer) {
+                    poolDebugContainer.innerHTML = draftData.pool_trace || `<span class="text-slate-600">HEAD ➔ NULL</span>`;
+                }
 
                 // 2. Fetch counter recommendations from API
                 const recommendationsResponse = await fetch(`${BACKEND_URL}/api/recommendations`);

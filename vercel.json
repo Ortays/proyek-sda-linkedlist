@@ -1,17 +1,30 @@
 {
-    "rewrites": [
+    "version": 2,
+    "builds": [
         {
-            "source": "/img/(.*)",
-            "destination": "/img/$1"
+            "src": "api/index.py",
+            "use": "@vercel/python"
         },
         {
-            "source": "/api/(.*)",
-            "destination": "/api/index.py"
+            "src": "index.html",
+            "use": "@vercel/static"
+        },
+        {
+            "src": "img/**",
+            "use": "@vercel/static"
         }
     ],
     "routes": [
         {
-            "src": "/",
+            "src": "/api/(.*)",
+            "dest": "/api/index.py"
+        },
+        {
+            "src": "/img/(.*)",
+            "dest": "/img/$1"
+        },
+        {
+            "src": "/(.*)",
             "dest": "/index.html"
         }
     ]

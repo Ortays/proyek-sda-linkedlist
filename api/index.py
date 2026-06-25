@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 from upstash_redis import Redis
@@ -206,7 +206,7 @@ def get_hero_img_url(hero_name: str) -> str:
         .replace(".", "")
         .replace("'", "")
         .replace("&", "&"))
-    return f"https://proyek-sda-linkedlist-8qg1.vercel.app/img/{safe_name}.png"
+    return f"/img/{safe_name}.png"
 
 # ==========================================
 # 3. NODE & LINKED LIST STRUCTURES
@@ -399,10 +399,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve img/ as static files
-img_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "img")
-if os.path.exists(img_dir):
-    app.mount("/img", StaticFiles(directory=img_dir), name="img")
+# Serve static files and index.html locally
+IS_LOCAL = "VERCEL" not in os.environ
+
+if IS_LOCAL:
+    index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "index.html")
+    if os.path.exists(index_path):
+        @app.get("/")
+        def serve_index():
+            return FileResponse(index_path)
+
+    img_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "img")
+    if os.path.exists(img_dir):
+        app.mount("/img", StaticFiles(directory=img_dir), name="img")
 
 @app.get("/api/heroes")
 def get_heroes():
@@ -499,3 +508,8 @@ def reset_draft():
 
 # Vercel handler
 handler = Mangum(app)
+
+if __name__ == "__main__":
+    import uvicorn
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    uvicorn.run("index:app", host="127.0.0.1", port=8000, reload=True, app_dir=script_dir)

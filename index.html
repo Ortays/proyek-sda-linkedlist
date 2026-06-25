@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MLBB Draft Pick Analyzer</title>
-    <link rel="icon" href="https://proyek-sda-linkedlist-8qg1.vercel.app/img/libra.ico"> <!-- Google Fonts -->
+    <link rel="icon" id="favicon" href=""> <!-- Google Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Space+Grotesk:wght@400;700&display=swap"
         rel="stylesheet">
@@ -383,7 +383,7 @@
 
         // Determine backend URL. If running index.html from main.py, origin is already the backend.
         // Otherwise (e.g. file:// or another dev server), point to http://localhost:8000.
-        const BACKEND_URL = window.location.hostname === 'ortays.github.io' || window.location.protocol === 'file:' ? "https://proyek-sda-linkedlist-8qg1.vercel.app" : "";
+        const BACKEND_URL = window.location.protocol === 'file:' ? "http://127.0.0.1:8000" : "";
 
         // Helper to grab full hero data by ID from local dataset
         function getHeroById(id) {
@@ -626,7 +626,7 @@
                 const hero = counterItem.hero;
                 if (!hero) return;
 
-                const imgUrl = `img/${hero.nama.replace(/\s+/g, '_')}.png`;
+                const imgUrl = hero.img;
                 const roleStyle = ROLE_COLORS[hero.role] || { bg: "bg-slate-900", text: "text-slate-300", border: "border-slate-800" };
                 const rate = counterItem.rate;
                 const reason = counterItem.reason;
@@ -635,7 +635,7 @@
                 card.className = "p-3 bg-slate-900/50 border border-slate-800/80 rounded-xl flex gap-3 hover:border-cyan-500/40 hover:bg-slate-900 transition-all duration-300 shadow-lg";
                 card.innerHTML = `
                     <div class="w-12 h-12 rounded-lg bg-slate-950 overflow-hidden border border-slate-800 flex-shrink-0">
-                        <img src="${imgUrl}" class="w-full h-full object-cover">
+                        <img src="${imgUrl.startsWith('http') ? imgUrl : BACKEND_URL + imgUrl}" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-grow min-w-0">
                         <div class="flex justify-between items-center">
@@ -722,6 +722,12 @@
 
         // Setup Event Listeners & Initial Rendering
         document.addEventListener("DOMContentLoaded", async () => {
+            // Setup dynamic favicon
+            const favicon = document.getElementById("favicon");
+            if (favicon) {
+                favicon.href = BACKEND_URL + "/img/libra.ico";
+            }
+
             // 1. Fetch initial HERO_POOL from backend
             try {
                 const response = await fetch(`${BACKEND_URL}/api/heroes`);
